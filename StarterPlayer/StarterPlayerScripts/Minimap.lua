@@ -3,7 +3,7 @@ local Players = game:GetService("Players")
 
 local player = Players.LocalPlayer
 
--- 1. Vytvoøení GUI pro minimapu
+-- 1. VytvoÅ™enÃ­ GUI pro minimapu
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MinimapGui"
 screenGui.ResetOnSpawn = false
@@ -13,31 +13,36 @@ local viewportFrame = Instance.new("ViewportFrame")
 viewportFrame.Name = "MinimapDisplay"
 viewportFrame.Size = UDim2.new(0, 250, 0, 250)
 viewportFrame.Position = UDim2.new(1, -270, 0, 20) 
--- Odstranìní výplnì minimapy (úplná prùhlednost)
+-- OdstranÄ›nÃ­ vÃ½plnÄ› minimapy (ÃºplnÃ¡ prÅ¯hlednost)
 viewportFrame.BackgroundTransparency = 1 
 viewportFrame.BorderSizePixel = 0
 viewportFrame.ClipsDescendants = true
+
+-- OPRAVA SVÄšTLA: Bez tohoto jsou naklonovanÃ© Party ve ViewportFrame ÃºplnÄ› ÄernÃ©/neviditelnÃ©!
+viewportFrame.Ambient = Color3.fromRGB(255, 255, 255)
+viewportFrame.LightColor = Color3.fromRGB(255, 255, 255)
+
 viewportFrame.Parent = screenGui
 
--- Zakulacení celé minimapy
+-- ZakulacenÃ­ celÃ© minimapy
 local mapCorner = Instance.new("UICorner")
 mapCorner.CornerRadius = UDim.new(0.1, 0)
 mapCorner.Parent = viewportFrame
 
--- Bílý obrys celé minimapy (zùstává zachován)
+-- BÃ­lÃ½ obrys celÃ© minimapy (zÅ¯stÃ¡vÃ¡ zachovÃ¡n)
 local mapStroke = Instance.new("UIStroke")
 mapStroke.Color = Color3.fromRGB(255, 255, 255)
 mapStroke.Thickness = 3
 mapStroke.Parent = viewportFrame
 
--- 2. Vytvoøení a nastavení kamery
+-- 2. VytvoÅ™enÃ­ a nastavenÃ­ kamery
 local minimapCamera = Instance.new("Camera")
 minimapCamera.CameraType = Enum.CameraType.Scriptable
 minimapCamera.FieldOfView = 70
 viewportFrame.CurrentCamera = minimapCamera
 minimapCamera.Parent = viewportFrame
 
--- Nalezení Baseplatu a pøizpùsobení minimapy jeho velikosti
+-- NalezenÃ­ Baseplatu a pÅ™izpÅ¯sobenÃ­ minimapy jeho velikosti
 local baseplate = workspace:WaitForChild("Baseplate", 10)
 
 if baseplate then
@@ -54,15 +59,18 @@ if baseplate then
 
 	minimapCamera.CFrame = CFrame.new(cameraPos, bpPos)
 else
-	warn("Objekt 'Baseplate' nebyl nalezen! Skript nebude fungovat správnì.")
-	return -- Zastaví skript, pokud neexistuje Baseplate
+	warn("Objekt 'Baseplate' nebyl nalezen! Skript nebude fungovat sprÃ¡vnÄ›.")
+	return -- ZastavÃ­ skript, pokud neexistuje Baseplate
 end
 
--- 3. Funkce pro naètení 3D objektù do minimapy z Workspace
+-- 3. Funkce pro naÄtenÃ­ 3D objektÅ¯ do minimapy z Workspace
 local function loadMinimapObjects()
 	local workspaceMinimapFolder = workspace:WaitForChild("Minimap", 10)
 
 	if not workspaceMinimapFolder then return end
+
+	-- OPRAVA NAÄŒÃTÃNÃ: PoÄkÃ¡me 2 vteÅ™iny, neÅ¾ se klientovi do sloÅ¾ky reÃ¡lnÄ› stÃ¡hnou objekty ze serveru
+	task.wait(2)
 
 	for _, obj in ipairs(workspaceMinimapFolder:GetChildren()) do
 		if obj:IsA("BasePart") or obj:IsA("Model") then
@@ -83,37 +91,39 @@ local function loadMinimapObjects()
 	end
 end
 
-loadMinimapObjects()
+-- PouÅ¾itÃ­ task.spawn, aby ÄekÃ¡nÃ­ 2 vteÅ™iny nezastavilo zbytek skriptu a rovnou se ukÃ¡zali hrÃ¡Äi
+task.spawn(loadMinimapObjects)
 
--- 4. Systém pro sledování VŠECH hráèù
+
+-- 4. SystÃ©m pro sledovÃ¡nÃ­ VÅ ECH hrÃ¡ÄÅ¯
 local playerIcons = {}
 
 local function createPlayerIcon(plr)
-	if playerIcons[plr] then return end -- Pokud už ikonu má, nevytváøíme novou
+	if playerIcons[plr] then return end -- Pokud uÅ¾ ikonu mÃ¡, nevytvÃ¡Å™Ã­me novou
 
 	local icon = Instance.new("ImageLabel")
 	icon.Name = plr.Name .. "_Icon"
-	icon.Size = UDim2.new(0, 18, 0, 18) -- Zmenšená ikona
+	icon.Size = UDim2.new(0, 18, 0, 18) -- ZmenÅ¡enÃ¡ ikona
 	icon.AnchorPoint = Vector2.new(0.5, 0.5)
 	icon.BackgroundTransparency = 1
 	icon.ZIndex = 10
 	icon.Visible = false -- Skryto, dokud nenajdeme postavu
 
 	local uiCorner = Instance.new("UICorner")
-	uiCorner.CornerRadius = UDim.new(0.5, 0) -- Dokonalý kruh
+	uiCorner.CornerRadius = UDim.new(0.5, 0) -- DokonalÃ½ kruh
 	uiCorner.Parent = icon
 
 	local uiStroke = Instance.new("UIStroke")
 	uiStroke.Thickness = 2
-	uiStroke.Color = Color3.fromRGB(255, 255, 255) -- Bílý obrys ikony hráèe
+	uiStroke.Color = Color3.fromRGB(255, 255, 255) -- BÃ­lÃ½ obrys ikony hrÃ¡Äe
 	uiStroke.Parent = icon
 
-	-- Tvoje ikona bude vždy vykreslena nad ostatními
+	-- Tvoje ikona bude vÅ¾dy vykreslena nad ostatnÃ­mi
 	if plr == player then
 		icon.ZIndex = 11 
 	end
 
-	-- Naètení fotky asynchronnì
+	-- NaÄtenÃ­ fotky asynchronnÄ›
 	task.spawn(function()
 		local success, content = pcall(function()
 			return Players:GetUserThumbnailAsync(plr.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
@@ -134,32 +144,97 @@ local function removePlayerIcon(plr)
 	end
 end
 
--- Vytvoøí ikony pro hráèe, kteøí už ve høe jsou, a hlídá pøipojení/odpojení
+-- VytvoÅ™Ã­ ikony pro hrÃ¡Äe, kteÅ™Ã­ uÅ¾ ve hÅ™e jsou, a hlÃ­dÃ¡ pÅ™ipojenÃ­/odpojenÃ­
 for _, plr in ipairs(Players:GetPlayers()) do
 	createPlayerIcon(plr)
 end
 Players.PlayerAdded:Connect(createPlayerIcon)
 Players.PlayerRemoving:Connect(removePlayerIcon)
 
--- 5. Smyèka pro aktualizaci pozic všech hráèù
+
+-- =======================================================
+-- 5. SystÃ©m pro sledovÃ¡nÃ­ BUDOV (zmenÅ¡enÃ© teÄky)
+-- =======================================================
+local activeBuildings = workspace:WaitForChild("ActiveBuildings", 10)
+local buildingIcons = {}
+
+local function createBuildingIcon(building)
+	if not building:IsA("Model") then return end
+	
+	-- PoÄkÃ¡me na PrimaryPart, podle kterÃ©ho zjistÃ­me pozici
+	local rootPart = building.PrimaryPart or building:WaitForChild("HumanoidRootPart", 2)
+	if not rootPart then return end
+
+	-- VytvoÅ™enÃ­ zmenÅ¡enÃ© teÄky pro budovu
+	local icon = Instance.new("Frame")
+	icon.Name = building.Name .. "_Icon"
+	icon.Size = UDim2.new(0, 8, 0, 8) -- ZMENÅ ENO na 8x8 px
+	icon.AnchorPoint = Vector2.new(0.5, 0.5)
+	icon.ZIndex = 8
+	
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = icon
+	
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 1
+	stroke.Color = Color3.fromRGB(0, 0, 0)
+	stroke.Parent = icon
+
+	if building.Name == "Zlata Dola" then
+		icon.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+	else
+		icon.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+	end
+
+	local relativeX = (rootPart.Position.X - baseplate.Position.X) / baseplate.Size.X + 0.5
+	local relativeZ = (rootPart.Position.Z - baseplate.Position.Z) / baseplate.Size.Z + 0.5
+	
+	if relativeX >= 0 and relativeX <= 1 and relativeZ >= 0 and relativeZ <= 1 then
+		icon.Position = UDim2.new(relativeX, 0, relativeZ, 0)
+		icon.Parent = viewportFrame
+		buildingIcons[building] = icon
+	else
+		icon:Destroy()
+	end
+end
+
+local function removeBuildingIcon(building)
+	if buildingIcons[building] then
+		buildingIcons[building]:Destroy()
+		buildingIcons[building] = nil
+	end
+end
+
+if activeBuildings then
+	for _, building in ipairs(activeBuildings:GetChildren()) do
+		createBuildingIcon(building)
+	end
+	activeBuildings.ChildAdded:Connect(createBuildingIcon)
+	activeBuildings.ChildRemoved:Connect(removeBuildingIcon)
+end
+-- =======================================================
+
+
+-- 6. SmyÄka pro aktualizaci pozic vÅ¡ech hrÃ¡ÄÅ¯
 RunService.RenderStepped:Connect(function()
 	for plr, icon in pairs(playerIcons) do
 		local character = plr.Character
 		if character and character:FindFirstChild("HumanoidRootPart") then
 			local rootPart = character.HumanoidRootPart
 
-			-- Relativní pozice na Baseplatu místo pixelù kamery
+			-- RelativnÃ­ pozice na Baseplatu mÃ­sto pixelÅ¯ kamery
 			local relativeX = (rootPart.Position.X - baseplate.Position.X) / baseplate.Size.X + 0.5
 			local relativeZ = (rootPart.Position.Z - baseplate.Position.Z) / baseplate.Size.Z + 0.5
 
-			-- Pokud je hráè na mapì (hodnoty od 0 do 1), tak ho zobrazíme
+			-- Pokud je hrÃ¡Ä na mapÄ› (hodnoty od 0 do 1), tak ho zobrazÃ­me
 			if relativeX >= 0 and relativeX <= 1 and relativeZ >= 0 and relativeZ <= 1 then
 				icon.Visible = true
 
-				-- Aplikování pøesné pozice do UI (Scale místo Offset)
+				-- AplikovÃ¡nÃ­ pÅ™esnÃ© pozice do UI (Scale mÃ­sto Offset)
 				icon.Position = UDim2.new(relativeX, 0, relativeZ, 0)
 
-				-- Výpoèet rotace ikony
+				-- VÃ½poÄet rotace ikony
 				local lookVector = rootPart.CFrame.LookVector
 				local rotation = math.deg(math.atan2(lookVector.X, lookVector.Z))
 				icon.Rotation = rotation + 180
