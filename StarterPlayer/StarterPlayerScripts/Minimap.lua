@@ -7,21 +7,34 @@ local player = Players.LocalPlayer
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MinimapGui"
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true -- Ignoruje horní lištu, drží mapu v rohu
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local viewportFrame = Instance.new("ViewportFrame")
 viewportFrame.Name = "MinimapDisplay"
-viewportFrame.Size = UDim2.new(0, 250, 0, 250)
-viewportFrame.Position = UDim2.new(1, -270, 0, 20) 
+
+-- =======================================================
+-- RESPONZIVNÍ VELIKOST A POZICE (MOBILY VS PC)
+-- =======================================================
+viewportFrame.Size = UDim2.new(0.25, 0, 0.25, 0) -- Zvětšeno na 25% obrazovky
+viewportFrame.AnchorPoint = Vector2.new(1, 0)
+viewportFrame.Position = UDim2.new(1, -10, 0, 10)
+
+-- Omezení velikosti: Telefony zůstanou stejné, PC se zvětší
+local sizeConstraint = Instance.new("UISizeConstraint")
+sizeConstraint.MinSize = Vector2.new(110, 110) -- Minimální pixely (Telefony - beze změny)
+sizeConstraint.MaxSize = Vector2.new(350, 350) -- Maximální pixely (PC Monitory - ZVĚTŠENO z 250 na 350)
+sizeConstraint.Parent = viewportFrame
+-- =======================================================
+
 -- Odstranění výplně minimapy (úplná průhlednost)
 viewportFrame.BackgroundTransparency = 1 
 viewportFrame.BorderSizePixel = 0
 viewportFrame.ClipsDescendants = true
 
--- OPRAVA SVĚTLA: Bez tohoto jsou naklonované Party ve ViewportFrame úplně černé/neviditelné!
+-- Světlo, aby objekty nebyly černé
 viewportFrame.Ambient = Color3.fromRGB(255, 255, 255)
 viewportFrame.LightColor = Color3.fromRGB(255, 255, 255)
-
 viewportFrame.Parent = screenGui
 
 -- Zakulacení celé minimapy
@@ -29,7 +42,7 @@ local mapCorner = Instance.new("UICorner")
 mapCorner.CornerRadius = UDim.new(0.1, 0)
 mapCorner.Parent = viewportFrame
 
--- Bílý obrys celé minimapy (zůstává zachován)
+-- Bílý obrys celé minimapy
 local mapStroke = Instance.new("UIStroke")
 mapStroke.Color = Color3.fromRGB(255, 255, 255)
 mapStroke.Thickness = 3
@@ -69,7 +82,7 @@ local function loadMinimapObjects()
 
 	if not workspaceMinimapFolder then return end
 
-	-- OPRAVA NAČÍTÁNÍ: Počkáme 2 vteřiny, než se klientovi do složky reálně stáhnou objekty ze serveru
+	-- Počkáme 2 vteřiny
 	task.wait(2)
 
 	for _, obj in ipairs(workspaceMinimapFolder:GetChildren()) do
@@ -91,39 +104,35 @@ local function loadMinimapObjects()
 	end
 end
 
--- Použití task.spawn, aby čekání 2 vteřiny nezastavilo zbytek skriptu a rovnou se ukázali hráči
 task.spawn(loadMinimapObjects)
-
 
 -- 4. Systém pro sledování VŠECH hráčů
 local playerIcons = {}
 
 local function createPlayerIcon(plr)
-	if playerIcons[plr] then return end -- Pokud už ikonu má, nevytváříme novou
+	if playerIcons[plr] then return end
 
 	local icon = Instance.new("ImageLabel")
 	icon.Name = plr.Name .. "_Icon"
-	icon.Size = UDim2.new(0, 18, 0, 18) -- Zmenšená ikona
+	icon.Size = UDim2.new(0, 18, 0, 18) 
 	icon.AnchorPoint = Vector2.new(0.5, 0.5)
 	icon.BackgroundTransparency = 1
 	icon.ZIndex = 10
-	icon.Visible = false -- Skryto, dokud nenajdeme postavu
+	icon.Visible = false 
 
 	local uiCorner = Instance.new("UICorner")
-	uiCorner.CornerRadius = UDim.new(0.5, 0) -- Dokonalý kruh
+	uiCorner.CornerRadius = UDim.new(0.5, 0)
 	uiCorner.Parent = icon
 
 	local uiStroke = Instance.new("UIStroke")
 	uiStroke.Thickness = 2
-	uiStroke.Color = Color3.fromRGB(255, 255, 255) -- Bílý obrys ikony hráče
+	uiStroke.Color = Color3.fromRGB(255, 255, 255) 
 	uiStroke.Parent = icon
 
-	-- Tvoje ikona bude vždy vykreslena nad ostatními
 	if plr == player then
 		icon.ZIndex = 11 
 	end
 
-	-- Načtení fotky asynchronně
 	task.spawn(function()
 		local success, content = pcall(function()
 			return Players:GetUserThumbnailAsync(plr.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
@@ -144,7 +153,6 @@ local function removePlayerIcon(plr)
 	end
 end
 
--- Vytvoří ikony pro hráče, kteří už ve hře jsou, a hlídá připojení/odpojení
 for _, plr in ipairs(Players:GetPlayers()) do
 	createPlayerIcon(plr)
 end
@@ -161,14 +169,12 @@ local buildingIcons = {}
 local function createBuildingIcon(building)
 	if not building:IsA("Model") then return end
 	
-	-- Počkáme na PrimaryPart, podle kterého zjistíme pozici
 	local rootPart = building.PrimaryPart or building:WaitForChild("HumanoidRootPart", 2)
 	if not rootPart then return end
 
-	-- Vytvoření zmenšené tečky pro budovu
 	local icon = Instance.new("Frame")
 	icon.Name = building.Name .. "_Icon"
-	icon.Size = UDim2.new(0, 8, 0, 8) -- ZMENŠENO na 8x8 px
+	icon.Size = UDim2.new(0, 8, 0, 8) -- Malá tečka pro budovu (8x8)
 	icon.AnchorPoint = Vector2.new(0.5, 0.5)
 	icon.ZIndex = 8
 	
@@ -223,18 +229,13 @@ RunService.RenderStepped:Connect(function()
 		if character and character:FindFirstChild("HumanoidRootPart") then
 			local rootPart = character.HumanoidRootPart
 
-			-- Relativní pozice na Baseplatu místo pixelů kamery
 			local relativeX = (rootPart.Position.X - baseplate.Position.X) / baseplate.Size.X + 0.5
 			local relativeZ = (rootPart.Position.Z - baseplate.Position.Z) / baseplate.Size.Z + 0.5
 
-			-- Pokud je hráč na mapě (hodnoty od 0 do 1), tak ho zobrazíme
 			if relativeX >= 0 and relativeX <= 1 and relativeZ >= 0 and relativeZ <= 1 then
 				icon.Visible = true
-
-				-- Aplikování přesné pozice do UI (Scale místo Offset)
 				icon.Position = UDim2.new(relativeX, 0, relativeZ, 0)
 
-				-- Výpočet rotace ikony
 				local lookVector = rootPart.CFrame.LookVector
 				local rotation = math.deg(math.atan2(lookVector.X, lookVector.Z))
 				icon.Rotation = rotation + 180
