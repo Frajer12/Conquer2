@@ -1,9 +1,10 @@
 return {
-	Chance = 50, -- % šance na padnutí z bedny
-	SellCost = 20, -- Kolik Coins dostaneš za prodej
-	DamageArmy = 5, -- +5% k damage vojákù
-	HealthArmy = 10, -- +10% k HP vojákù
-	DamageBuilding = 0, -- +0% k damage budov
-	HealthBuilding = 0, -- +0% k HP budov
-	CoinBoost = 5 -- +5% k pasivnímu pøíjmu z dolù
+	Rarity = 1, -- 1=Common, 2=Uncommon, 3=Rare, 4=Epic, 5=Mythic, 6=Divine, 7=Transcendent, 10=Insane
+	Chance = 50, 
+	SellCost = 20, 
+	DamageArmy = 5, 
+	HealthArmy = 10, 
+	DamageBuilding = 0, 
+	HealthBuilding = 0, 
+	CoinBoost = 5 
 }
